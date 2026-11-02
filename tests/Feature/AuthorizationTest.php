@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\CheckoutService;
 
 beforeEach(function () {
     $this->category = Category::create(['name' => 'Drinks']);
@@ -49,6 +50,56 @@ it('lets a cashier read products', function () {
     $this->withHeaders(authHeader(cashier()))
         ->getJson('/api/v1/products')
         ->assertOk();
+});
+
+it('hides one cashier\'s sales from another', function () {
+    $jane = cashier();
+    $bob = cashier();
+
+    app(CheckoutService::class)->checkout($jane, [['product_id' => $this->mug->id, 'quantity' => 1]]);
+
+    $this->withHeaders(authHeader($jane))->getJson('/api/v1/sales')
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+
+    $this->withHeaders(authHeader($bob))->getJson('/api/v1/sales')
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+});
+
+it('stops a cashier reading another cashier\'s sale by uuid (IDOR)', function () {
+    $jane = cashier();
+    $bob = cashier();
+
+    $sale = app(CheckoutService::class)->checkout($jane, [['product_id' => $this->mug->id, 'quantity' => 1]]);
+
+    // 404 rather than 403 — a 403 would confirm the sale exists.
+    $this->withHeaders(authHeader($bob))
+        ->getJson("/api/v1/sales/{$sale->uuid}")
+        ->assertStatus(404);
+
+    $this->withHeaders(authHeader($jane))
+        ->getJson("/api/v1/sales/{$sale->uuid}")
+        ->assertOk();
+});
+
+it('lets a manager see every sale', function () {
+    $jane = cashier();
+    app(CheckoutService::class)->checkout($jane, [['product_id' => $this->mug->id, 'quantity' => 1]]);
+
+    $this->withHeaders(authHeader(manager()))
+        ->getJson('/api/v1/sales')
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+});
+
+it('never exposes a sequential sale id', function () {
+    $jane = cashier();
+    $sale = app(CheckoutService::class)->checkout($jane, [['product_id' => $this->mug->id, 'quantity' => 1]]);
+
+    $body = $this->withHeaders(authHeader($jane))->getJson("/api/v1/sales/{$sale->uuid}")->json('data');
+
+    expect($body)->not->toHaveKey('id');
 });
 
 it('never leaks a password hash through the user resource', function () {

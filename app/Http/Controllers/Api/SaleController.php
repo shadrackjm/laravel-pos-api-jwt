@@ -17,6 +17,10 @@ class SaleController extends ApiController
     {
         $sales = Sale::query()
             ->with(['user:id,name', 'customer:id,name,phone'])
+            // Episode 15 — a cashier sees only their own sales; a manager sees all.
+            // This is the scoping that stops one cashier reading another's takings.
+            ->unless(auth()->user()->isManager(), fn ($q) => $q->where('user_id', auth()->id()))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->latest()
             ->paginate($request->integer('per_page', 20));
 
@@ -42,6 +46,14 @@ class SaleController extends ApiController
 
     public function show(Sale $sale): JsonResponse
     {
+        // Route-model binding resolved this by uuid. It does NOT check ownership,
+        // so we must — otherwise any authenticated cashier can read any sale
+        // just by holding its uuid. That is the IDOR bug from episode 15.
+        if (! auth()->user()->isManager() && $sale->user_id !== auth()->id()) {
+            // 404, not 403. A 403 confirms the sale exists, which is itself a leak.
+            return $this->error('Sale not found.', 404);
+        }
+
         return $this->success(new SaleResource($sale->load(['items', 'user', 'customer'])));
     }
 }
