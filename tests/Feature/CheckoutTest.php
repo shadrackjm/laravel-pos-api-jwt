@@ -133,3 +133,26 @@ it('freezes the product name onto the receipt', function () {
 
     expect($sale->items->first()->product_name)->toBe('Coffee Mug');
 });
+
+it('restores stock on refund and refuses to refund twice', function () {
+    $manager = manager();
+    $checkout = app(CheckoutService::class);
+
+    $sale = $checkout->checkout($manager, [['product_id' => $this->mug->id, 'quantity' => 4]]);
+
+    expect($this->mug->fresh()->stock)->toBe(36);
+
+    $this->withHeaders(authHeader($manager))
+        ->postJson("/api/v1/sales/{$sale->uuid}/refund")
+        ->assertOk()
+        ->assertJsonPath('data.status', 'refunded');
+
+    expect($this->mug->fresh()->stock)->toBe(40);
+
+    // A second refund must not hand the stock back again.
+    $this->withHeaders(authHeader($manager))
+        ->postJson("/api/v1/sales/{$sale->uuid}/refund")
+        ->assertStatus(422);
+
+    expect($this->mug->fresh()->stock)->toBe(40);
+});

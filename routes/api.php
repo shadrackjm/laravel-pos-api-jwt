@@ -66,5 +66,8 @@ Route::prefix('v1')->group(function () {
 
         // The checkout is the one endpoint that must never run twice. Episode 18.
         Route::post('/sales', [SaleController::class, 'store'])->middleware('idempotent');
+
+        Route::post('/sales/{sale}/refund', [SaleController::class, 'refund'])
+            ->middleware('role:manager');
     });
 });

@@ -130,6 +130,36 @@ class CheckoutService
         }, 3);
     }
 
+    /**
+     * Episode 20 — a refund puts stock back, inside its own transaction.
+     */
+    public function refund(Sale $sale): Sale
+    {
+        return DB::transaction(function () use ($sale) {
+            // Re-read under a lock. Without this, two refund taps both see
+            // "completed" and both give the stock back — a double refund.
+            $locked = Sale::whereKey($sale->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== 'completed') {
+                throw ValidationException::withMessages([
+                    'sale' => ['Only a completed sale can be refunded.'],
+                ]);
+            }
+
+            foreach ($locked->items as $item) {
+                // The product may have been deleted since the sale. The receipt
+                // survives (product_name is frozen) but there is no stock to return.
+                if ($item->product_id) {
+                    Product::whereKey($item->product_id)->increment('stock', $item->quantity);
+                }
+            }
+
+            $locked->update(['status' => 'refunded']);
+
+            return $locked->load('items');
+        }, 3);
+    }
+
     private function centsToDecimal(int $cents): string
     {
         return number_format($cents / 100, 2, '.', '');

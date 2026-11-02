@@ -66,6 +66,13 @@ class SaleController extends ApiController
         return $this->success(new SaleResource($sale->load(['items', 'user', 'customer'])));
     }
 
+    public function refund(Sale $sale): JsonResponse
+    {
+        $refunded = $this->checkout->refund($sale);
+
+        return $this->success(new SaleResource($refunded->load(['items', 'user'])), 'Sale refunded.');
+    }
+
     private function sendReceipt(Sale $sale): void
     {
         // Stand-in for a real printer / SMS / e-mail integration.
