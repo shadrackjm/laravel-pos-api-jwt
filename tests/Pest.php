@@ -14,7 +14,7 @@ use Tests\TestCase;
 */
 
 pest()->extend(TestCase::class)
- // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -43,7 +43,25 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Sign a user in and return the Authorization header for them.
+ *
+ * Episode 12: every protected-endpoint test needs this, so it lives here
+ * rather than being copy-pasted into thirty tests.
+ */
+function authHeader(App\Models\User $user): array
 {
-    // ..
+    $token = app(App\Services\TokenService::class)->issue($user);
+
+    return ['Authorization' => "Bearer {$token}"];
+}
+
+function manager(): App\Models\User
+{
+    return App\Models\User::factory()->create(['role' => 'manager']);
+}
+
+function cashier(): App\Models\User
+{
+    return App\Models\User::factory()->create(['role' => 'cashier']);
 }

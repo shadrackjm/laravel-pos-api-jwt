@@ -56,11 +56,62 @@ class AuthController extends ApiController
         return $this->success($this->tokenPayload($user), 'Login successful.');
     }
 
+    public function me(): JsonResponse
+    {
+        return $this->success(new UserResource(auth()->user()));
+    }
+
+    /**
+     * Episode 12 — trade a refresh token for a fresh pair.
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'refresh_token' => ['required', 'string'],
+        ]);
+
+        $result = $this->tokens->rotateRefreshToken($validated['refresh_token']);
+
+        if (! $result) {
+            return $this->error('Refresh token is invalid, expired or already used.', 401);
+        }
+
+        return $this->success([
+            'user' => new UserResource($result['user']),
+            'access_token' => $result['access_token'],
+            'refresh_token' => $result['refresh_token'],
+            'token_type' => 'Bearer',
+            'expires_in' => $this->tokens->accessTokenTtl(),
+        ], 'Token refreshed.');
+    }
+
+    /**
+     * Episode 12 — real logout.
+     *
+     * A JWT is valid until it expires; there is nothing on the server to delete.
+     * So logout does two things: deny THIS access token by its `jti` until it
+     * would have expired anyway, and revoke the user's refresh tokens so no new
+     * access token can be minted.
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $claims = $request->attributes->get('jwt_claims');
+
+        if ($claims) {
+            $this->tokens->deny($claims);
+        }
+
+        $this->tokens->revokeAllRefreshTokens(auth()->user());
+
+        return $this->success(null, 'Logged out successfully.');
+    }
+
     private function tokenPayload(User $user): array
     {
         return [
             'user' => new UserResource($user),
             'access_token' => $this->tokens->issue($user),
+            'refresh_token' => $this->tokens->issueRefreshToken($user),
             'token_type' => 'Bearer',
             'expires_in' => $this->tokens->accessTokenTtl(),
         ];

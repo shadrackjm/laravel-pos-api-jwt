@@ -30,10 +30,16 @@ Route::prefix('v1')->group(function () {
         // the IP alone, so ordinary API calls would use up the login limit.
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1,register');
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1,login');
+        Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('throttle:10,1,refresh');
     });
 
     // ── Authenticated ───────────────────────────────────────────────────────
     Route::middleware(['jwt.auth', 'throttle:120,1,api'])->group(function () {
+
+        Route::prefix('auth')->group(function () {
+            Route::get('/me', [AuthController::class, 'me']);
+            Route::post('/logout', [AuthController::class, 'logout']);
+        });
 
         Route::get('/products', [ProductController::class, 'index']);
         Route::get('/products/{product}', [ProductController::class, 'show']);
