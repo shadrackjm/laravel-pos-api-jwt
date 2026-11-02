@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->group(function () {
+
+    // ── Public ──────────────────────────────────────────────────────────────
     Route::get('/ping', function () {
         return response()->json([
             'success' => true,
@@ -30,6 +32,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1,login');
     });
 
-    Route::apiResource('products', ProductController::class);
-    Route::apiResource('categories', CategoryController::class);
+    // ── Authenticated ───────────────────────────────────────────────────────
+    Route::middleware(['jwt.auth', 'throttle:120,1,api'])->group(function () {
+
+        Route::get('/products', [ProductController::class, 'index']);
+        Route::get('/products/{product}', [ProductController::class, 'show']);
+        Route::post('/products', [ProductController::class, 'store']);
+        Route::match(['put', 'patch'], '/products/{product}', [ProductController::class, 'update']);
+        Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+
+        Route::apiResource('categories', CategoryController::class);
+    });
 });

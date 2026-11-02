@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\User;
+use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Illuminate\Support\Str;
 
 /**
@@ -52,6 +54,28 @@ class TokenService
         ];
 
         return JWT::encode($payload, $this->secret, $this->algo);
+    }
+
+    /**
+     * Verify a token and return its claims, or null if it is in any way not good.
+     */
+    public function decode(string $token): ?object
+    {
+        try {
+            return JWT::decode($token, new Key($this->secret, $this->algo));
+        } catch (ExpiredException) {
+            return null;
+        } catch (\Throwable) {
+            // Bad signature, malformed, wrong algorithm — all equally "no".
+            return null;
+        }
+    }
+
+    public function userFromToken(string $token): ?User
+    {
+        $claims = $this->decode($token);
+
+        return $claims ? User::find($claims->sub) : null;
     }
 
     public function accessTokenTtl(): int
