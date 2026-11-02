@@ -23,6 +23,12 @@ class CheckoutService
     public function checkout(User $cashier, array $items, ?int $customerId = null): Sale
     {
         return DB::transaction(function () use ($cashier, $items, $customerId) {
+            // Episode 16 — all money maths happens in whole cents.
+            //
+            // Floats cannot represent 0.1 exactly. Add ten of them and you get
+            // 0.9999999999999999, not 1.0. On a busy till those fractions of a
+            // cent accumulate until the drawer does not balance, and nobody can
+            // work out why. Integers have no such problem.
             $totalCents = 0;
             $lines = [];
 

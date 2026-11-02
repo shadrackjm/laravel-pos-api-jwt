@@ -46,6 +46,19 @@ it('records a sale, reduces stock and totals correctly', function () {
         ->and($this->tea->fresh()->stock)->toBe(13);
 });
 
+it('returns money as a string, never a float', function () {
+    $cashier = cashier();
+
+    $response = $this->withHeaders(authHeader($cashier) + ['Idempotency-Key' => 'test-key-2'])
+        ->postJson('/api/v1/sales', [
+            'items' => [['product_id' => $this->mug->id, 'quantity' => 1]],
+        ]);
+
+    $total = $response->json('data.total');
+
+    expect($total)->toBeString()->toBe('12.50');
+});
+
 it('refuses to oversell and leaves stock untouched', function () {
     $cashier = cashier();
 
