@@ -34,6 +34,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function isManager(): bool
+    {
+        return $this->role === 'manager';
+    }
+
     public function refreshTokens(): HasMany
     {
         return $this->hasMany(RefreshToken::class);

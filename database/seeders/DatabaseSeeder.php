@@ -11,10 +11,15 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'manager@pos.test'],
+            ['name' => 'Maria Manager', 'password' => 'password', 'role' => 'manager'],
+        );
+
+        User::updateOrCreate(
+            ['email' => 'jane@pos.test'],
+            ['name' => 'Jane Cashier', 'password' => 'password', 'role' => 'cashier'],
+        );
 
         $drinks = Category::firstOrCreate(['name' => 'Drinks']);
         $stationery = Category::firstOrCreate(['name' => 'Stationery']);

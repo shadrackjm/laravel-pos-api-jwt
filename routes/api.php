@@ -42,13 +42,22 @@ Route::prefix('v1')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
         });
 
+        // Reads are open to any signed-in staff member.
         Route::get('/products', [ProductController::class, 'index']);
         Route::get('/products/{product}', [ProductController::class, 'show']);
-        Route::post('/products', [ProductController::class, 'store']);
-        Route::match(['put', 'patch'], '/products/{product}', [ProductController::class, 'update']);
-        Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+        Route::get('/categories', [CategoryController::class, 'index']);
+        Route::get('/categories/{category}', [CategoryController::class, 'show']);
 
-        Route::apiResource('categories', CategoryController::class);
+        // Writes to the catalogue are a manager's job. Episode 14.
+        Route::middleware('role:manager')->group(function () {
+            Route::post('/products', [ProductController::class, 'store']);
+            Route::match(['put', 'patch'], '/products/{product}', [ProductController::class, 'update']);
+            Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+
+            Route::post('/categories', [CategoryController::class, 'store']);
+            Route::match(['put', 'patch'], '/categories/{category}', [CategoryController::class, 'update']);
+            Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+        });
 
         // Sales. Note the ordering: a literal segment must be declared before a
         // wildcard, or `/sales/report` gets captured as a sale uuid.
