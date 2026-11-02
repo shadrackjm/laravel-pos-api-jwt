@@ -2,34 +2,43 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Models\Category;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class CategoryController extends Controller
+class CategoryController extends ApiController
 {
-    public function index()
+    public function index(): JsonResponse
     {
+        // withCount instead of loading every product just to count them.
         $categories = Category::withCount('products')->orderBy('name')->get();
 
-        return response()->json($categories);
+        return $this->success($categories->map(fn ($c) => [
+            'id' => $c->id,
+            'name' => $c->name,
+            'products_count' => $c->products_count,
+        ]));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:categories,name'],
         ]);
 
-        return response()->json(Category::create($validated), 201);
+        return $this->success(Category::create($validated), 'Category created.', 201);
     }
 
-    public function show(Category $category)
+    public function show(Category $category): JsonResponse
     {
-        return response()->json($category->loadCount('products'));
+        return $this->success([
+            'id' => $category->id,
+            'name' => $category->name,
+            'products_count' => $category->products()->count(),
+        ]);
     }
 
-    public function update(Request $request, Category $category)
+    public function update(Request $request, Category $category): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:categories,name,'.$category->id],
@@ -37,19 +46,19 @@ class CategoryController extends Controller
 
         $category->update($validated);
 
-        return response()->json($category);
+        return $this->success($category, 'Category updated.');
     }
 
-    public function destroy(Category $category)
+    public function destroy(Category $category): JsonResponse
     {
+        // Deleting a category cascades to its products (see the migration).
+        // Refusing is friendlier than silently destroying the catalogue.
         if ($category->products()->exists()) {
-            return response()->json([
-                'message' => 'Cannot delete a category that still has products.',
-            ], 422);
+            return $this->error('Cannot delete a category that still has products.', 422);
         }
 
         $category->delete();
 
-        return response()->json(null, 204);
+        return $this->success(null, 'Category deleted.');
     }
 }

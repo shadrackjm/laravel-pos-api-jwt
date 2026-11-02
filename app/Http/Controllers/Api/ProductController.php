@@ -2,58 +2,46 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
-class ProductController extends Controller
+class ProductController extends ApiController
 {
-    public function index()
+    public function index(): JsonResponse
     {
         $products = Product::with('category')->paginate(15);
 
-        return ProductResource::collection($products);
+        return $this->paginated(
+            $products->setCollection(ProductResource::collection($products->getCollection())->collection)
+        );
     }
 
-    public function store(Request $request)
+    public function store(StoreProductRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
-            'name' => ['required', 'string', 'max:255'],
-            'sku' => ['required', 'string', 'max:64', 'unique:products,sku'],
-            'price' => ['required', 'numeric', 'decimal:0,2', 'min:0'],
-            'stock' => ['required', 'integer', 'min:0'],
-        ]);
+        $product = Product::create($request->validated());
 
-        $product = Product::create($validated);
-
-        return response()->json($product, 201);
+        return $this->success(new ProductResource($product->load('category')), 'Product created.', 201);
     }
 
-    public function show(Product $product)
+    public function show(Product $product): JsonResponse
     {
-        return new ProductResource($product->load('category'));
+        return $this->success(new ProductResource($product->load('category')));
     }
 
-    public function update(Request $request, Product $product)
+    public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
-        $validated = $request->validate([
-            'category_id' => ['sometimes', 'integer', 'exists:categories,id'],
-            'name' => ['sometimes', 'string', 'max:255'],
-            'price' => ['sometimes', 'numeric', 'decimal:0,2', 'min:0'],
-            'stock' => ['sometimes', 'integer', 'min:0'],
-        ]);
+        $product->update($request->validated());
 
-        $product->update($validated);
-
-        return response()->json($product);
+        return $this->success(new ProductResource($product->load('category')), 'Product updated.');
     }
 
-    public function destroy(Product $product)
+    public function destroy(Product $product): JsonResponse
     {
         $product->delete();
 
-        return response()->json(null, 204);
+        return $this->success(null, 'Product deleted.');
     }
 }
