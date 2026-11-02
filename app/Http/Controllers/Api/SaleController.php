@@ -37,6 +37,15 @@ class SaleController extends ApiController
             customerId: $request->validated('customer_id'),
         );
 
+        // Episode 19 — anything that talks to the outside world happens HERE,
+        // after the transaction has committed. A receipt printer or SMS call
+        // inside the transaction would hold database locks for the length of a
+        // network round trip, and could succeed just before a rollback — sending
+        // a customer a receipt for a sale that no longer exists.
+        //
+        // rescue() means a failing side effect can never fail the sale itself.
+        rescue(fn () => $this->sendReceipt($sale), report: false);
+
         return $this->success(
             new SaleResource($sale->load(['items', 'user', 'customer'])),
             'Sale completed.',
@@ -55,5 +64,11 @@ class SaleController extends ApiController
         }
 
         return $this->success(new SaleResource($sale->load(['items', 'user', 'customer'])));
+    }
+
+    private function sendReceipt(Sale $sale): void
+    {
+        // Stand-in for a real printer / SMS / e-mail integration.
+        logger()->info('Receipt issued', ['receipt' => $sale->receipt_number]);
     }
 }
