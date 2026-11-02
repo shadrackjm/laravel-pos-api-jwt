@@ -23,4 +23,13 @@ class Product extends Model
     {
         return $this->belongsTo(Category::class);
     }
+
+    /**
+     * The price in whole cents, for arithmetic. All money maths in this app goes
+     * through integers — see episode 16.
+     */
+    public function priceInCents(): int
+    {
+        return (int) round((float) $this->price * 100);
+    }
 }

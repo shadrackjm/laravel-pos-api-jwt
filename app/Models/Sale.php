@@ -17,6 +17,15 @@ class Sale extends Model
         ];
     }
 
+    /**
+     * Bind {sale} in routes by uuid, not id. Sequential IDs are guessable, and a
+     * guessable ID is half of an IDOR bug — see episode 15.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

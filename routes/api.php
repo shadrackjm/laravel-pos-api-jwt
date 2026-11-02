@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\SaleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,5 +49,11 @@ Route::prefix('v1')->group(function () {
         Route::delete('/products/{product}', [ProductController::class, 'destroy']);
 
         Route::apiResource('categories', CategoryController::class);
+
+        // Sales. Note the ordering: a literal segment must be declared before a
+        // wildcard, or `/sales/report` gets captured as a sale uuid.
+        Route::get('/sales', [SaleController::class, 'index']);
+        Route::get('/sales/{sale}', [SaleController::class, 'show']);
+        Route::post('/sales', [SaleController::class, 'store']);
     });
 });
