@@ -22,3 +22,9 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Scribe output: regenerate with `php artisan scribe:generate`
+/.scribe
+/public/vendor/scribe
+/resources/views/scribe
+/storage/app/private/scribe

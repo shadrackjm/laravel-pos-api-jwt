@@ -39,6 +39,22 @@ class SaleController extends ApiController
         );
     }
 
+    /**
+     * Record a sale
+     *
+     * Records a multi-item sale, reduces stock, and returns a receipt.
+     * Requires an `Idempotency-Key` header — retries with the same key replay
+     * the original response rather than charging again.
+     *
+     * @group Sales
+     *
+     * @authenticated
+     *
+     * @header Idempotency-Key 8f14e45f-ea6d-4c19-a6b1-9c2f0e1d3a7b
+     *
+     * @responseField data.receipt_number The customer-facing receipt reference.
+     * @responseField data.total Money, as a string. Never a JSON number.
+     */
     public function store(StoreSaleRequest $request): JsonResponse
     {
         $sale = $this->checkout->checkout(
