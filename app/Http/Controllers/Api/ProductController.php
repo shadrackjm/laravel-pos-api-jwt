@@ -7,12 +7,37 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ProductController extends ApiController
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $products = Product::with('category')->paginate(15);
+        $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'sort' => ['nullable', 'string', 'in:name,price,stock,created_at'],
+            'direction' => ['nullable', 'string', 'in:asc,desc'],
+            // Capped. Without a max, `?per_page=100000` is a free denial of service.
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $products = Product::query()
+            ->with('category')
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $term = $request->string('search')->toString();
+                // Escape the LIKE wildcards, or a search for "100%" matches
+                // everything and a search for "_" matches every single character.
+                $escaped = addcslashes($term, '%_\\');
+                $query->where('name', 'like', "%{$escaped}%");
+            })
+            ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
+            ->when($request->boolean('in_stock'), fn ($q) => $q->where('stock', '>', 0))
+            // Whitelisted by the validator above. Passing user input straight
+            // into orderBy() is an SQL injection vector.
+            ->orderBy($request->input('sort', 'name'), $request->input('direction', 'asc'))
+            ->paginate($request->integer('per_page', 15))
+            ->withQueryString();
 
         return $this->paginated(
             $products->setCollection(ProductResource::collection($products->getCollection())->collection)

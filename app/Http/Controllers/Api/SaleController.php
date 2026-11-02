@@ -15,14 +15,24 @@ class SaleController extends ApiController
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'status' => ['nullable', 'in:completed,refunded'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
         $sales = Sale::query()
             ->with(['user:id,name', 'customer:id,name,phone'])
             // Episode 15 — a cashier sees only their own sales; a manager sees all.
             // This is the scoping that stops one cashier reading another's takings.
             ->unless(auth()->user()->isManager(), fn ($q) => $q->where('user_id', auth()->id()))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
+            ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->date('from')))
+            ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->date('to')))
             ->latest()
-            ->paginate($request->integer('per_page', 20));
+            ->paginate($request->integer('per_page', 20))
+            ->withQueryString();
 
         return $this->paginated(
             $sales->setCollection(SaleResource::collection($sales->getCollection())->collection)
