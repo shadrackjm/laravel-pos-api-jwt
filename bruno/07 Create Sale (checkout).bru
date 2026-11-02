@@ -1,0 +1,67 @@
+meta {
+  name: 07 Create Sale (checkout)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/sales
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Idempotency-Key: {{idempotencyKey}}
+}
+
+body:json {
+  {
+    "items": [
+      { "product_id": {{productId}}, "quantity": 3 }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setEnvVar("saleUuid", res.body.data.uuid);
+  }
+}
+
+tests {
+  test("sale recorded", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("total is a string, calculated server-side", function () {
+    expect(res.body.data.total).to.be.a("string");
+  });
+
+  test("no sequential id is exposed", function () {
+    expect(res.body.data).to.not.have.property("id");
+  });
+
+  test("the frozen product name is on the receipt", function () {
+    expect(res.body.data.items[0].product_name).to.be.a("string");
+  });
+}
+
+docs {
+  THE money shot of the series (episode 13).
+
+  Sequence on camera:
+    1. run "06 List Products", note the stock
+    2. run this
+    3. run "06 List Products" again — stock has dropped by 3
+    4. run "08 Create Sale (replay)" — same receipt, still ONE sale
+
+  Note there is no `total`, no `unit_price` and no `user_id` in the body. All
+  computed server-side (episode 13). Try adding "total": "0.01" to show it
+  being ignored.
+}

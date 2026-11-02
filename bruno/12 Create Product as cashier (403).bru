@@ -1,0 +1,44 @@
+meta {
+  name: 12 Create Product as cashier (403)
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "category_id": 1,
+    "name": "Teapot",
+    "sku": "POT-001",
+    "price": "19.99",
+    "stock": 5
+  }
+}
+
+tests {
+  test("403, NOT 401 — authenticated but not allowed", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+docs {
+  Episode 14. Run "02 Login (cashier)" first.
+
+  The assertion is 403, not 401, and that distinction is the whole point: a 401
+  would tell the client to log in again, sending a correctly-logged-in cashier
+  into an infinite refresh loop.
+}

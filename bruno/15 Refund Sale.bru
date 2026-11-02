@@ -1,0 +1,40 @@
+meta {
+  name: 15 Refund Sale
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/v1/sales/{{saleUuid}}/refund
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Accept: application/json
+}
+
+tests {
+  test("refunded", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.data.status).to.equal("refunded");
+  });
+}
+
+docs {
+  Episode 20. Manager-only — refunds are how tills get robbed.
+
+  POST, not DELETE: we're not deleting the sale, we're recording a new fact
+  about it. Financial records are append-only.
+
+  On camera:
+    1. run "06 List Products", note the stock
+    2. run this → 200, status "refunded"
+    3. run "06 List Products" → stock has RETURNED
+    4. run this again → 422, and stock is UNCHANGED
+       (the second assertion matters as much as the first)
+}

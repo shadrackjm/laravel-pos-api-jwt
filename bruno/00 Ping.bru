@@ -1,0 +1,18 @@
+meta {
+  name: 00 Ping
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/ping
+  body: none
+  auth: none
+}
+
+docs {
+  Health check (episode 2). Public — no token needed.
+
+  Hit this first whenever something stops working, to find out whether the
+  problem is your API or your request.
+}

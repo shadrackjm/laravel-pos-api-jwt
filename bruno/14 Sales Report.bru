@@ -1,0 +1,39 @@
+meta {
+  name: 14 Sales Report
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/api/v1/reports/sales
+  body: none
+  auth: bearer
+}
+
+params:query {
+  ~from: 2026-08-01
+  ~to: 2026-08-31
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Accept: application/json
+}
+
+tests {
+  test("revenue is a string", function () {
+    expect(res.body.data.revenue).to.be.a("string");
+  });
+}
+
+docs {
+  Episode 22. Manager-only — run as a cashier to get a 403.
+
+  Aggregated in SQL (COUNT / SUM / GROUP BY), not looped in PHP. Refunded sales
+  are excluded from revenue.
+
+  Try `to` earlier than `from` to show the after_or_equal validation.
+}

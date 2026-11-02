@@ -1,0 +1,56 @@
+meta {
+  name: 01 Login (manager)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "email": "manager@pos.test",
+    "password": "password"
+  }
+}
+
+script:post-response {
+  // Episode 23 — capture the token so every protected request just works.
+  // The `data.` path is our envelope from episode 7.
+  if (res.getStatus() === 200) {
+    bru.setEnvVar("token", res.body.data.access_token);
+    bru.setEnvVar("refreshToken", res.body.data.refresh_token);
+  }
+}
+
+tests {
+  test("logs in and returns a token pair", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.data.access_token).to.be.a("string");
+    expect(res.body.data.refresh_token).to.be.a("string");
+  });
+
+  test("the manager role comes back", function () {
+    expect(res.body.data.user.role).to.equal("manager");
+  });
+
+  test("never leaks a password hash", function () {
+    expect(res.body.data.user).to.not.have.property("password");
+  });
+}
+
+docs {
+  Run this first. The post-response script stores the access token in the
+  `token` environment variable, which every protected request below uses via
+  `Bearer {{token}}`.
+
+  Seeded credentials: manager@pos.test / password
+}

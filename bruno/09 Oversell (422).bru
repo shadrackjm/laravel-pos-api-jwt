@@ -1,0 +1,48 @@
+meta {
+  name: 09 Oversell (422)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/sales
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Idempotency-Key: oversell-demo-{{$randomUUID}}
+}
+
+body:json {
+  {
+    "items": [
+      { "product_id": {{productId}}, "quantity": 9999 }
+    ]
+  }
+}
+
+tests {
+  test("refused with 422", function () {
+    expect(res.getStatus()).to.equal(422);
+    expect(res.body.success).to.equal(false);
+  });
+
+  test("the error says what is available", function () {
+    expect(JSON.stringify(res.body.errors)).to.contain("Insufficient stock");
+  });
+}
+
+docs {
+  Episode 13's business rule. The message names what's available and what was
+  requested, so the cashier's app can say "only 37 left, you asked for 9999".
+
+  Run "06 List Products" afterwards — stock is UNCHANGED, because the whole
+  transaction rolled back.
+}

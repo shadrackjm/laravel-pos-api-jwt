@@ -1,0 +1,32 @@
+meta {
+  name: 04 Create Category
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/categories
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "name": "Kitchenware"
+  }
+}
+
+docs {
+  Manager-only (episode 14). The seeder already creates "Drinks" and "Stationery",
+  so this adds a new one. Expect 422 on a second run — the unique
+  constraint on the name is doing its job, which is worth showing on camera.
+}

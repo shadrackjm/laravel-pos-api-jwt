@@ -1,0 +1,35 @@
+meta {
+  name: 10 List Sales
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v1/sales?per_page=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  per_page: 20
+  ~status: completed
+  ~from: 2026-08-01
+  ~to: 2026-08-31
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Accept: application/json
+}
+
+docs {
+  Episode 15 — ownership scoping.
+
+  Run as the manager: every sale.
+  Run as a cashier ("02 Login (cashier)" first): only their own.
+
+  That difference, with no other change, is the scoping in the query.
+}

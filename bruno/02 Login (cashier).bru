@@ -1,0 +1,43 @@
+meta {
+  name: 02 Login (cashier)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "email": "jane@pos.test",
+    "password": "password"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setEnvVar("token", res.body.data.access_token);
+    bru.setEnvVar("refreshToken", res.body.data.refresh_token);
+  }
+}
+
+tests {
+  test("the cashier role comes back", function () {
+    expect(res.body.data.user.role).to.equal("cashier");
+  });
+}
+
+docs {
+  Switch to a cashier token. Use this before "12 Create Product (403)" to
+  demonstrate the role check from episode 14.
+
+  Seeded credentials: jane@pos.test / password
+}

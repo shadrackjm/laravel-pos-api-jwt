@@ -1,0 +1,59 @@
+meta {
+  name: 05 Create Product
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "category_id": 1,
+    "name": "Travel Mug",
+    "sku": "MUG-002",
+    "price": "12.50",
+    "stock": 40
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setEnvVar("productId", res.body.data.id);
+  }
+}
+
+tests {
+  test("created", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("money comes back as a STRING, not a number", function () {
+    expect(res.body.data.price).to.be.a("string");
+  });
+
+  test("the computed in_stock flag is present", function () {
+    expect(res.body.data.in_stock).to.equal(true);
+  });
+}
+
+docs {
+  Manager-only. Note the assertions: `price` must be a string (episode 16) and
+  `in_stock` is a field we invented that does not exist in the database
+  (episode 6).
+
+  Uses MUG-002 because the seeder already creates MUG-001. Expect 422 on a
+  second run — SKU is unique. That's a good failure to show.
+}

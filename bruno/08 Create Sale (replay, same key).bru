@@ -1,0 +1,50 @@
+meta {
+  name: 08 Create Sale (replay, same key)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/sales
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Idempotency-Key: {{idempotencyKey}}
+}
+
+body:json {
+  {
+    "items": [
+      { "product_id": {{productId}}, "quantity": 3 }
+    ]
+  }
+}
+
+tests {
+  test("returns the ORIGINAL receipt, not a new sale", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.body.data.uuid).to.equal(bru.getEnvVar("saleUuid"));
+  });
+
+  test("flagged as a replay", function () {
+    expect(res.getHeader("idempotent-replay")).to.equal("true");
+  });
+}
+
+docs {
+  Episode 18 — the duplicate checkout.
+
+  Identical to "07" including the SAME Idempotency-Key. Run it immediately
+  after 07: you get back the same receipt uuid, the `Idempotent-Replay: true`
+  header, and — the point — the stock does NOT drop again.
+
+  Then change the quantity and re-send to get a 409: same key, different body.
+}

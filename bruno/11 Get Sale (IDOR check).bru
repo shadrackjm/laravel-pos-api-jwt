@@ -1,0 +1,32 @@
+meta {
+  name: 11 Get Sale (IDOR check)
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/v1/sales/{{saleUuid}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Accept: application/json
+}
+
+docs {
+  Episode 15 — the IDOR demo.
+
+  The URL uses a UUID, not a sequential id, so it can't be enumerated by
+  counting. But that's a speed bump, not the fix.
+
+  On camera:
+    1. as the cashier who made the sale → 200
+    2. "02 Login (cashier)" as a DIFFERENT cashier, re-run → 404
+       (404, not 403 — a 403 would confirm the sale exists)
+    3. as the manager → 200
+}

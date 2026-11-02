@@ -1,0 +1,45 @@
+meta {
+  name: 16 Refresh Token
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/refresh
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "refresh_token": "{{refreshToken}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setEnvVar("token", res.body.data.access_token);
+    bru.setEnvVar("refreshToken", res.body.data.refresh_token);
+  }
+}
+
+tests {
+  test("returns a NEW refresh token (rotation)", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.data.refresh_token).to.be.a("string");
+  });
+}
+
+docs {
+  Episode 12. Public on purpose — you call this BECAUSE your access token has
+  expired, so requiring a valid one would defeat the point.
+
+  Rotation demo: run it once (200), then run it again immediately WITHOUT the
+  script updating the variable — the old token is dead, so you get 401. That
+  failure is the signal that reveals a stolen token.
+}

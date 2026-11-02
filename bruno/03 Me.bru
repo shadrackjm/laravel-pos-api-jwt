@@ -1,0 +1,36 @@
+meta {
+  name: 03 Me
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Accept: application/json
+}
+
+tests {
+  test("returns the signed-in user", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.data.email).to.be.a("string");
+  });
+
+  test("never exposes password or remember_token", function () {
+    expect(res.body.data).to.not.have.property("password");
+    expect(res.body.data).to.not.have.property("remember_token");
+  });
+}
+
+docs {
+  Episode 12 uses this to demonstrate the denylist: run it (200), run
+  "20 Logout", then run it again — it must return 401.
+}
