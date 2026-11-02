@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'jwt.auth' => \App\Http\Middleware\EnsureTokenIsValid::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'idempotent' => \App\Http\Middleware\EnsureIdempotency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

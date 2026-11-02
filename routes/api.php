@@ -63,6 +63,8 @@ Route::prefix('v1')->group(function () {
         // wildcard, or `/sales/report` gets captured as a sale uuid.
         Route::get('/sales', [SaleController::class, 'index']);
         Route::get('/sales/{sale}', [SaleController::class, 'show']);
-        Route::post('/sales', [SaleController::class, 'store']);
+
+        // The checkout is the one endpoint that must never run twice. Episode 18.
+        Route::post('/sales', [SaleController::class, 'store'])->middleware('idempotent');
     });
 });
