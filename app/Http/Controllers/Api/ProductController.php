@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -12,7 +13,7 @@ class ProductController extends Controller
     {
         $products = Product::with('category')->paginate(15);
 
-        return response()->json($products);
+        return ProductResource::collection($products);
     }
 
     public function store(Request $request)
@@ -32,7 +33,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        return response()->json($product->load('category'));
+        return new ProductResource($product->load('category'));
     }
 
     public function update(Request $request, Product $product)
