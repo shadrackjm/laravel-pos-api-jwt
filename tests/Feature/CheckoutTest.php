@@ -107,6 +107,22 @@ it('never trusts a client-supplied total', function () {
     expect(Sale::first()->user_id)->toBe($cashier->id);
 });
 
+it('merges duplicate lines instead of double-counting stock', function () {
+    $cashier = cashier();
+
+    $this->withHeaders(authHeader($cashier) + ['Idempotency-Key' => 'test-key-6'])
+        ->postJson('/api/v1/sales', [
+            'items' => [
+                ['product_id' => $this->mug->id, 'quantity' => 2],
+                ['product_id' => $this->mug->id, 'quantity' => 3],
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.total', '62.50');   // 5 × 12.50
+
+    expect($this->mug->fresh()->stock)->toBe(35);
+});
+
 it('freezes the product name onto the receipt', function () {
     $sale = app(CheckoutService::class)->checkout(
         cashier(),

@@ -22,7 +22,47 @@ class CheckoutService
      */
     public function checkout(User $cashier, array $items, ?int $customerId = null): Sale
     {
+        // Episode 17 — the retry count is not decoration.
+        //
+        // We lock product rows in the order the CLIENT sent them. Two cashiers
+        // checking out {mug, notebook} and {notebook, mug} at the same instant
+        // each hold one lock and wait for the other: a deadlock. The database
+        // picks a victim and rolls it back, which without a retry surfaces to
+        // the cashier as a 500 on a sale that should simply have succeeded.
+        //
+        // Retrying the whole closure is safe because everything inside it is
+        // database work that rolls back with it. Anything that is NOT safe to
+        // repeat — printing, SMS, a payment gateway call — is deliberately kept
+        // outside this closure. See episode 19.
         return DB::transaction(function () use ($cashier, $items, $customerId) {
+            // Merge duplicate lines first. A client that sends the same product
+            // twice would otherwise lock it twice and double-count the stock check.
+            $quantities = [];
+            foreach ($items as $item) {
+                $id = (int) $item['product_id'];
+                $quantities[$id] = ($quantities[$id] ?? 0) + (int) $item['quantity'];
+            }
+
+            // Episode 17 — the actual race.
+            //
+            // The naive version reads stock, compares it, then decrements. Between
+            // the read and the write, another checkout can do exactly the same
+            // thing: both see "1 left", both pass, both decrement. Stock goes to
+            // -1 and the shop has sold an item it does not have. That gap is a
+            // TOCTOU bug (time-of-check to time-of-use).
+            //
+            // lockForUpdate() makes the second transaction WAIT at this line until
+            // the first one commits, so it reads the already-decremented value.
+            //
+            // ksort() gives every checkout the same lock ordering, which is what
+            // actually prevents most deadlocks — the retry above is the safety net.
+            ksort($quantities);
+
+            $products = Product::whereIn('id', array_keys($quantities))
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
             // Episode 16 — all money maths happens in whole cents.
             //
             // Floats cannot represent 0.1 exactly. Add ten of them and you get
@@ -32,20 +72,26 @@ class CheckoutService
             $totalCents = 0;
             $lines = [];
 
-            foreach ($items as $item) {
-                $product = Product::findOrFail($item['product_id']);
+            foreach ($quantities as $productId => $quantity) {
+                $product = $products->get($productId);
+
+                if (! $product) {
+                    throw ValidationException::withMessages([
+                        'items' => ["Product {$productId} does not exist."],
+                    ]);
+                }
 
                 // Reject rather than silently under-deduct. Letting the sale
                 // through and clamping stock at zero means the books say you sold
                 // five and the shelf says you had three, with no error anywhere.
-                if ($product->stock < $item['quantity']) {
+                if ($product->stock < $quantity) {
                     throw ValidationException::withMessages([
-                        'items' => ["Insufficient stock for {$product->name}. Available: {$product->stock}, requested: {$item['quantity']}."],
+                        'items' => ["Insufficient stock for {$product->name}. Available: {$product->stock}, requested: {$quantity}."],
                     ]);
                 }
 
                 $unitCents = $product->priceInCents();
-                $lineCents = $unitCents * $item['quantity'];
+                $lineCents = $unitCents * $quantity;
                 $totalCents += $lineCents;
 
                 $lines[] = [
@@ -53,14 +99,15 @@ class CheckoutService
                     // Frozen at the moment of sale. The product may later be
                     // renamed, repriced or deleted; this receipt must not change.
                     'product_name' => $product->name,
-                    'quantity' => $item['quantity'],
+                    'quantity' => $quantity,
                     'unit_price' => $this->centsToDecimal($unitCents),
                     'line_total' => $this->centsToDecimal($lineCents),
                 ];
 
                 // decrement() issues `stock = stock - N` as a single SQL statement,
-                // so the database does the arithmetic.
-                $product->decrement('stock', $item['quantity']);
+                // so the database does the arithmetic. We already hold the lock,
+                // but this also avoids writing back a value we read earlier.
+                $product->decrement('stock', $quantity);
             }
 
             $sale = Sale::create([
@@ -80,7 +127,7 @@ class CheckoutService
             $sale->items()->createMany($lines);
 
             return $sale->load('items');
-        });
+        }, 3);
     }
 
     private function centsToDecimal(int $cents): string
