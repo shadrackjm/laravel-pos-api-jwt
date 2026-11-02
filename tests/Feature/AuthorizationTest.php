@@ -93,6 +93,11 @@ it('lets a manager see every sale', function () {
         ->assertJsonCount(1, 'data');
 });
 
+it('keeps the sales report to managers only', function () {
+    $this->withHeaders(authHeader(cashier()))->getJson('/api/v1/reports/sales')->assertStatus(403);
+    $this->withHeaders(authHeader(manager()))->getJson('/api/v1/reports/sales')->assertOk();
+});
+
 it('never exposes a sequential sale id', function () {
     $jane = cashier();
     $sale = app(CheckoutService::class)->checkout($jane, [['product_id' => $this->mug->id, 'quantity' => 1]]);

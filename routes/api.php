@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,6 +58,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/categories', [CategoryController::class, 'store']);
             Route::match(['put', 'patch'], '/categories/{category}', [CategoryController::class, 'update']);
             Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+
+            // Only a manager sees the shop's takings.
+            Route::get('/reports/sales', [ReportController::class, 'sales']);
         });
 
         // Sales. Note the ordering: a literal segment must be declared before a

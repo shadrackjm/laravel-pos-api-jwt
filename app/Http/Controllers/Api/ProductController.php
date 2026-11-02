@@ -23,6 +23,8 @@ class ProductController extends ApiController
         ]);
 
         $products = Product::query()
+            // Episode 22 — without this, rendering N products fires N extra
+            // queries for their categories. One eager load fixes it.
             ->with('category')
             ->when($request->filled('search'), function ($query) use ($request) {
                 $term = $request->string('search')->toString();
