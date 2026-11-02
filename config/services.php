@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'jwt' => [
+        // Read through config, never env() directly in app code: once the config
+        // is cached in production, env() returns null and every token breaks.
+        'secret' => env('JWT_SECRET'),
+    ],
+
 ];

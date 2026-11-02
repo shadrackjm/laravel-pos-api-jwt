@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ProductController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,14 @@ Route::prefix('v1')->group(function () {
             'message' => 'pong',
             'data' => ['version' => 'v1'],
         ]);
+    });
+
+    Route::prefix('auth')->group(function () {
+        // A strict limit here specifically: this is where passwords get guessed.
+        // The third argument names the bucket. Without it every throttle keys on
+        // the IP alone, so ordinary API calls would use up the login limit.
+        Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1,register');
+        Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1,login');
     });
 
     Route::apiResource('products', ProductController::class);

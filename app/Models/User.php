@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'role'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -26,6 +26,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            // Laravel 13 hashes on assignment. Hash::make() in a controller is
+            // redundant here — it is NOT double-hashed (the cast checks first),
+            // but it is dead code. Episode 10 covers this.
             'password' => 'hashed',
         ];
     }
